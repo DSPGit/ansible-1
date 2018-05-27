@@ -1,0 +1,126 @@
+Access Key ID:
+AKIAJAQTPXLUW33PFPKA
+Secret Access Key:
+0wOp9UMByJd4u6pfvuMrUgNcaCt4SvHb9vGnuZ1h
+
+sudo yum -y install ansible
+aws configure
+
+aws s3 ls //check whether aws is configured or not
+
+ec2-user:~/environment $ cat ~/.aws/config
+ec2-user:~/environment $ cat ~/.aws/credentials
+openssl genrsa -out my-key.pem 2048 //Generating RSA private key, 2048 bit long modulus
+openssl rsa -in my-key.pem -pubout > my-key.pub
+aws ec2 import-key-pair --key-name my-key --public-key-material <<content of my-key.pub>>
+
+{
+    "KeyName": "my-key", 
+    "KeyFingerprint": "8d:f4:9b:ae:72:81:f5:94:27:83:2c:01:80:e4:af:9f"
+}
+
+ec2-user:~/environment $ aws ec2 create-security-group --group-name my-sg --description "My security group"
+{
+    "GroupId": "sg-083a768dddb8df963"
+}
+ec2-user:~/environment $ aws ec2 authorize-security-group-ingress --group-id <SG_ID> --protocol tcp --port 22 --cidr 0.0.0.0/0
+bash: SG_ID: No such file or directory
+ec2-user:~/environment $ aws ec2 authorize-security-group-ingress --group-id sg-083a768dddb8df963 --protocol tcp --port 22 --cidr 0.0.0.0/0                                                                                                           
+ec2-user:~/environment $ aws ec2 authorize-security-group-ingress --group-id sg-083a768dddb8df963 --protocol tcp --port 80 --cidr 0.0.0.0/0     
+
+
+aws ec2 run-instances --image-id ami-03291866 --count 2 --instance-type t2.micro --key-name my-key --security-group-ids sg-083a768dddb8df963
+
+
+create the inventory file
+sudo vi /etc/ansible/hosts
+
+//////create host  inventory//////////
+cat /etc/ansible/hosts 
+
+[webservers]
+ec2-18-188-104-159.us-east-2.compute.amazonaws.com ansible_connection=ssh        ansible_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/environment/my-key.pem ansible_become=yes
+ec2-18-221-0-254.us-east-2.compute.amazonaws.com ansible_connection=ssh        ansible_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/environment/my-key.pem ansible_become=yes
+
+edit 
+
+disable host checking : sudo vi /etc/ansible/ansible.cfg
+
+check if able to connect
+ec2-user:~/environment $ chmod 600 my-key.pem
+ec2-user:~/environment $ ansible all -m ping
+ec2-18-221-0-254.us-east-2.compute.amazonaws.com | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+ec2-18-188-104-159.us-east-2.compute.amazonaws.com | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+
+ansible webservers -m ping
+ec2-18-221-0-254.us-east-2.compute.amazonaws.com | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+ec2-18-188-104-159.us-east-2.compute.amazonaws.com | SUCCESS => {
+    "changed": false, 
+    "ping": "pong"
+}
+
+http://docs.ansible.com/ansible/latest/modules/modules_by_category.html
+Module Index — Ansible Documentation
+docs.ansible.com
+For previous versions, see the documentation archive.. Installation, Upgrade & Configuration. Installation Guide. Basics / What Will Be Installed
+
+do ssh to machines
+
+ssh -i my-key.pem ec2-user@ec2-18-188-104-159.us-east-2.compute.amazonaws.com
+
+ansible-playbook webserver.yaml -vvv
+
+aws ec2 create-security-group --group-name my-sg-lb --description "My security group for Load balancer"
+{
+    "GroupId": "sg-03643ad9b03a3998f"
+}
+
+aws ec2 authorize-security-group-ingress --group-id sg-03643ad9b03a3998f --protocol tcp --port 80 --cidr 0.0.0.0/0
+
+
+
+
+aws elb create-load-balancer --load-balancer-name my-load-balancer --listeners "Protocol=HTTP,LoadBalancerPort=80,InstanceProtocol=HTTP,InstancePort=80" --subnets subnet-5028361d --security-groups sg-03643ad9b03a3998f    
+{
+    "DNSName": "my-load-balancer-1033523622.us-east-2.elb.amazonaws.com"
+}
+
+$ aws elb register-instances-with-load-balancer --load-balancer-name my-load-balancer --instances i-0ac9feb798cf124a1 i-08859fc6876a2422d
+{
+    "Instances": [
+        {
+            "InstanceId": "i-0ac9feb798cf124a1"
+        }, 
+        {
+            "InstanceId": "i-08859fc6876a2422d"
+        }
+    ]
+}
+
+aws elb delete-load-balancer --load-balancer-name my-load-balancer
+aws ec2 terminate-instances --instance-ids i-0ac9feb798cf124a1 
+i-08859fc6876a2422d
+aws ec2 delete-security-group --group-name my-sg
+aws ec2 delete-security-group --group-name my-sg-lb
+
+ sudo pip install boto boto3
+
+ ansible-playbook my-project.yaml  -e "ansible_python_interpreter=/usr/bin/python"
+
+scp -i my-key.pem ec2-user@ec2-18-221-199-253.us-east-2.compute.amazonaws.com:/etc/httpd/conf/httpd.conf  ./
+httpd.conf                 
+
+
+list all factor variable from localmachin
+ansible localhost -m setup
+
+ssh -i my-key.pem ec2-18-221-199-253.us-east-2.compute.amazonaws.com
