@@ -98,8 +98,8 @@
         name: "{{ elbname }}"
         region: "{{ region }}"
         state: present
-        zones:
-          - "{{lbs_zone}}"
+       # zones:
+        #  - "{{lbs_zone}}"
         subnets:
            - "{{subnet}}"
         security_group_names:
