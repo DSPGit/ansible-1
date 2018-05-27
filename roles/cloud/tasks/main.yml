@@ -1,0 +1,4 @@
+---
+- include: keypair.yml
+- include: create_instance.yml
+- include: create_elb.yml

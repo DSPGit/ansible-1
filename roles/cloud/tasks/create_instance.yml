@@ -1,0 +1,57 @@
+---
+- name: creating a security group
+  ec2_group:
+    name: "{{ sgname }}"
+    description: my webserver sg
+    vpc_id: "{{ vpcid }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        ports:
+          - 80
+          - 22
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow ports 80 & 22
+  register: testsg_out
+- debug:
+    var: testsg_out
+    
+- name: create Instances
+  ec2:
+    count_tag:
+      Name: "{{ ins_name }}"
+    instance_tags:
+        Name: "{{ ins_name }}"
+    instance_type: "{{ ins_type }}"
+    exact_count: "{{ count }}"
+    key_name: "{{ kpname }}"
+    image: "{{ img_id }}"
+    wait: yes
+    group: "{{ sgname }}"
+    region: "{{ region }}"
+    vpc_subnet_id: "{{subnet}}"
+    assign_public_ip: yes
+  register: ec2_out
+- debug:
+    var: ec2_out
+  
+- name: add host to group "{{ ins_name }}"
+  add_host:
+    name: "{{ item.dns_name }}"
+    group: webservers
+  loop: "{{ ec2_out.tagged_instances}}"
+  register: host_out
+- debug:
+    var: host_out
+  
+- name: wait_for_instance_start
+  wait_for:
+    host: "{{item.dns_name}}"
+    port: 22
+    delay: 5
+    timeout: 320
+    state: started
+  loop: "{{ ec2_out.tagged_instances}}"
+  register: wait_out
+- debug:
+    var: wait_out

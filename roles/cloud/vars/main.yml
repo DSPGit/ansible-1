@@ -1,0 +1,13 @@
+---
+img_id: ami-03291866
+vpcid: vpc-e23c7e8a
+subnet: subnet-5028361d
+region: us-east-2
+lbs_zone: us-east-2c
+ins_type: t2.micro
+count: 2
+sgname: testsg
+lbssgname: lbssg
+kpname: my_keypair
+ins_name: ansible_demo
+elbname: test-lbs

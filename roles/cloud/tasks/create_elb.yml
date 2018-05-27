@@ -1,0 +1,47 @@
+---
+- name: creating a security group for load balancer
+  ec2_group:
+    name: "{{ lbssgname }}"
+    description: my loadbalancer security group
+    vpc_id: "{{ vpcid }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        ports:
+          - 80
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow ports 80 for lb
+  register: lbssg_out
+
+- debug:
+    var: lbssg_out
+
+- name: Basic provisioning for lbs
+  ec2_elb_lb:
+    wait: no
+    name: "{{ elbname }}"
+    region: "{{ region }}"
+    state: present
+    zones:
+      - "{{lbs_zone}}"
+    subnets:
+       - "{{subnet}}"
+    security_group_names:
+      - "{{lbssgname}}"
+    listeners:
+      - protocol: http # options are http, https, ssl, tcp
+        load_balancer_port: 80
+        instance_port: 80
+  register: lbs_out
+  
+- debug:
+    var: lbs_out
+
+- name: Instance register
+  ec2_elb:
+    wait: no
+    instance_id: "{{item.id}}"
+    ec2_elbs: "{{elbname}}"
+    region: "{{region}}"
+    state: present
+  loop: "{{  ec2_out.tagged_instances}}"

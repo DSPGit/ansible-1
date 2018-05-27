@@ -1,0 +1,153 @@
+---
+- hosts: localhost
+  vars:
+    img_id: ami-03291866
+    vpcid: vpc-e23c7e8a
+    subnet: subnet-5028361d
+    region: us-east-2
+    lbs_zone: us-east-2a
+    ins_type: t2.micro
+    count: 2
+    sgname: testsg
+    lbssgname: lbssg
+    kpname: my_keypair
+    ins_name: ansible_demo
+    elbname: test-lbs
+  tasks:
+    - name: creating a security group
+      ec2_group:
+        name: "{{ sgname }}"
+        description: my webserver sg
+        vpc_id: "{{ vpcid }}"
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 80
+              - 22
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow ports 80 & 22
+      register: testsg_out
+    - debug:
+        var: testsg_out
+    - name: create key pair using key_material obtained using 'file' lookup plugin
+      ec2_key:
+        name: "{{ kpname }}"
+        key_material: "{{ lookup('file', '/home/ec2-user/environment/my-key.1.pub') }}"
+      register: testkp_out
+    - debug:
+        var: testkp_out        
+    - name: create Instances
+      ec2:
+        count_tag:
+          Name: "{{ ins_name }}"
+        instance_tags:
+            Name: "{{ ins_name }}"
+        instance_type: "{{ ins_type }}"
+        exact_count: "{{ count }}"
+        key_name: "{{ kpname }}"
+        image: "{{ img_id }}"
+        wait: yes
+        group: "{{ sgname }}"
+        region: "{{ region }}"
+        vpc_subnet_id: "{{subnet}}"
+        assign_public_ip: yes
+      register: ec2_out
+    - debug:
+        var: ec2_out
+      
+    - name: add host to group "{{ ins_name }}"
+      add_host:
+        name: "{{ item.dns_name }}"
+        group: webservers
+      loop: "{{ ec2_out.tagged_instances}}"
+      register: host_out
+    - debug:
+        var: host_out
+      
+    - name: wait_for_instance_start
+      wait_for:
+        host: "{{item.dns_name}}"
+        port: 22
+        delay: 5
+        timeout: 320
+        state: started
+      loop: "{{ ec2_out.tagged_instances}}"
+      register: wait_out
+    - debug:
+        var: wait_out
+        
+    - name: creating a security group for load balancer
+      ec2_group:
+        name: "{{ lbssgname }}"
+        description: my loadbalancer security group
+        vpc_id: "{{ vpcid }}"
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 80
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow ports 80 for lb
+      register: lbssg_out
+    - debug:
+        var: lbssg_out
+    
+    - name: Basic provisioning for lbs
+      ec2_elb_lb:
+        name: "{{ elbname }}"
+        region: "{{ region }}"
+        state: present
+       # zones:
+        #  - "{{lbs_zone}}"
+        subnets:
+           - "{{subnet}}"
+        security_group_names:
+          - "{{lbssgname}}"
+        listeners:
+          - protocol: http # options are http, https, ssl, tcp
+            load_balancer_port: 80
+            instance_port: 80
+      register: lbs_out
+      
+    - debug:
+        var: lbs_out
+    - name: Instance register
+      ec2_elb:
+        instance_id: "{{item.id}}"
+        ec2_elbs: "{{elbname}}"
+        region: "{{region}}"
+        state: present
+      loop: "{{  ec2_out.tagged_instances}}"
+    
+- name: configure instances
+  hosts: webservers
+  become: True
+  gather_facts: True
+  remote_user: ec2-user
+  vars:
+    ansible_ssh_private_key_file: /home/ec2-user/environment/my-key.pem
+  tasks:
+  - name: ensure apache is at the latest version
+    yum:
+      name: httpd
+      state: latest
+  - name: ensure apache is running
+    service:
+      name: httpd
+      state: started
+ # - name: Templating the httpd.configure
+#    template:
+#      src: /home/ec2-user/environment/httpd.j2
+#      dest: /etc/httpd/conf/httpd.conf
+#    notify: restart_apache
+    
+  - copy:
+      src: files/index.html
+      dest: /var/www/html/index.html
+      
+  handlers:
+    - name: restart_apache
+      service:
+         name: httpd
+         state: restarted

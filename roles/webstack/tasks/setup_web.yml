@@ -1,0 +1,23 @@
+---
+  - name: ensure apache is at the latest version
+    yum:
+      name: httpd
+      state: latest
+  - name: ensure apache is running
+    service:
+      name: httpd
+      state: started
+# - name: Templating the httpd.configure
+#    template:
+#      src: httpd.j2
+#      dest: /etc/httpd/conf/httpd.conf
+#    notify: restart_apache
+
+  - name: Templating the httpd.configure
+    template:
+      src: test.j2
+      dest: /var/www/html/test.html
+
+  - copy:
+      src: index.html
+      dest: /var/www/html/index.html
