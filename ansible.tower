@@ -1,0 +1,11 @@
+{
+    "company_name": "synochron", 
+    "contact_email": "rajesh.vaghela@synechron.com", 
+    "contact_name": "vinit bhamare", 
+    "hostname": "c8a743ff4e4a4cc08d0ebe7bb614ac54", 
+    "instance_count": 10, 
+    "license_date": 2127034122, 
+    "license_key": "c2a098587d5ce4bee21809f1e221c9534c776453b4a69f5e3be805996ef8aa17", 
+    "license_type": "basic", 
+    "subscription_name": "Red Hat Ansible Tower, Self-Support (10 Managed Nodes)"
+}
