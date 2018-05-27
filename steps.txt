@@ -114,3 +114,7 @@ aws ec2 terminate-instances --instance-ids i-0ac9feb798cf124a1
 i-08859fc6876a2422d
 aws ec2 delete-security-group --group-name my-sg
 aws ec2 delete-security-group --group-name my-sg-lb
+
+////////////AWS///////////////
+get zone
+https://us-east-2.console.aws.amazon.com/vpc/home?region=us-east-2#subnets:
