@@ -120,3 +120,7 @@ get zone
 https://us-east-2.console.aws.amazon.com/vpc/home?region=us-east-2#subnets:
 
 https://drive.google.com/drive/folders/1dL69DSZX8Xd1j2L_7Oa9B4acWDQfPFhV
+
+mohan@y2ytech.com
+9611046506
+mohanraz@google.com
