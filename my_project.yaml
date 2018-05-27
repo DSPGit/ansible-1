@@ -1,17 +1,18 @@
 ---
 - hosts: localhost
   vars:
+    img_id: ami-03291866
+    vpcid: vpc-e23c7e8a
+    subnet: subnet-5028361d
+    region: us-east-2
+    lbs_zone: us-east-2a
+    ins_type: t2.micro
+    count: 2
     sgname: testsg
     lbssgname: lbssg
-    vpcid: vpc-e23c7e8a
-    region: us-east-2
     kpname: my_keypair
-    ins_type: t2.micro
-    img_id: ami-03291866
-    count: 2
     ins_name: ansible_demo
     elbname: test-lbs
-    subnet: subnet-8de79ae5
   tasks:
     - name: creating a security group
       ec2_group:
@@ -36,20 +37,21 @@
       register: testkp_out
     - debug:
         var: testkp_out        
-    - ec2:
-        exact_count: "{{ count }}"
+    - name: create Instances
+      ec2:
         count_tag:
           Name: "{{ ins_name }}"
-        key_name: "{{ kpname }}"
+        instance_tags:
+            Name: "{{ ins_name }}"
         instance_type: "{{ ins_type }}"
+        exact_count: "{{ count }}"
+        key_name: "{{ kpname }}"
         image: "{{ img_id }}"
         wait: yes
         group: "{{ sgname }}"
         region: "{{ region }}"
         vpc_subnet_id: "{{subnet}}"
         assign_public_ip: yes
-        instance_tags:
-            Name: "{{ ins_name }}"
       register: ec2_out
     - debug:
         var: ec2_out
@@ -62,7 +64,7 @@
       register: host_out
     - debug:
         var: host_out
-        
+      
     - name: wait_for_instance_start
       wait_for:
         host: "{{item.dns_name}}"
@@ -97,7 +99,7 @@
         region: "{{ region }}"
         state: present
         zones:
-          - us-east-2a
+          - "{{lbs_zone}}"
         subnets:
            - "{{subnet}}"
         security_group_names:
@@ -134,11 +136,11 @@
     service:
       name: httpd
       state: started
-  - name: Templating the httpd.configure
-    template:
-      src: /home/ec2-user/environment/httpd.j2
-      dest: /etc/httpd/conf/httpd.conf
-    notify: restart_apache
+ # - name: Templating the httpd.configure
+#    template:
+#      src: /home/ec2-user/environment/httpd.j2
+#      dest: /etc/httpd/conf/httpd.conf
+#    notify: restart_apache
     
   - copy:
       src: files/index.html
